@@ -1,0 +1,11 @@
+ARG CROSS_BASE_IMAGE
+FROM $CROSS_BASE_IMAGE
+
+RUN mkdir -p mkdir -p /usr/local/cargo/bin \
+  && curl -L \
+    https://github.com/lu-zero/cargo-c/releases/download/v0.9.15/cargo-c-$(\
+      echo $CROSS_TOOLCHAIN_PREFIX | sed -e 's/linux-musl-/unknown-linux-musl/g' \
+    ).tar.gz \
+    | tar xz -C /usr/local/cargo/bin
+
+ENTRYPOINT ["cross/entrypoint-build-libs.sh"]
