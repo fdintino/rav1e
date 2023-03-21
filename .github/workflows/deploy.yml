@@ -165,36 +165,56 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        build:
-          - binary
-          - sdk
         target:
          - i686-unknown-linux-musl
          - x86_64-unknown-linux-musl
          - aarch64-unknown-linux-musl
+        target_cpu:
+         - default
+         - x86-64
+         - x86-64-v2
+         - x86-64-v3
+        build:
+         - binary
+         - sdk
         include:
-         - target: x86_64-unknown-linux-musl
-           name: linux-generic
-           target_cpu: x86-64
-         - target: x86_64-unknown-linux-musl
-           name: linux-sse4
-           target_cpu: x86-64-v2
-         - target: x86_64-unknown-linux-musl
-           name: linux-avx2
-           target_cpu: x86-64-v3
-         - target: aarch64-unknown-linux-musl
-           target_cpu: default
-           name: linux-aarch64
-         - target: i686-unknown-linux-musl
-           name: linux-i686
-           target_cpu: generic
          - build: binary
            pkgname: rav1e
          - build: sdk
            pkgname: librav1e
+         - target: i686-unknown-linux-musl
+           name: linux-i686
+         - target: aarch64-unknown-linux-musl
+           name: linux-aarch64
+         - target: x86_64-unknown-linux-musl
+           target_cpu: x86-64
+           name: linux-generic
+         - target: x86_64-unknown-linux-musl
+           target_cpu: x86-64-v2
+           name: linux-sse4
+         - target: x86_64-unknown-linux-musl
+           target_cpu: x86-64-v3
+           name: linux-avx2
+        exclude:
+         - target: x86_64-unknown-linux-musl
+           target_cpu: default
+         - target: aarch64-unknown-linux-musl
+           target_cpu: x86-64
+         - target: aarch64-unknown-linux-musl
+           target_cpu: x86-64-v2
+         - target: aarch64-unknown-linux-musl
+           target_cpu: x86-64-v3
+         - target: i686-unknown-linux-musl
+           target_cpu: x86-64
+         - target: i686-unknown-linux-musl
+           target_cpu: x86-64-v2
+         - target: i686-unknown-linux-musl
+           target_cpu: x86-64-v3
 
     # if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
+
+    name: linux-binaries (${{ matrix.build }}, ${{ matrix.name }})
 
     steps:
     - uses: actions/checkout@v3
@@ -209,11 +229,11 @@ jobs:
         override: true
 
     - name: Install cross
-      if: matrix.target == 'aarch64-unknown-linux-musl'
+      if: matrix.target != 'x86_64-unknown-linux-musl'
       env:
-        LINK: https://github.com/rust-embedded/cross/releases/download
-        CROSS_VERSION: 0.2.0
-        CROSS_FILE: cross-v0.2.0-x86_64-unknown-linux-musl
+        LINK: https://github.com/cross-rs/cross/releases/download
+        CROSS_VERSION: 0.2.5
+        CROSS_FILE: cross-x86_64-unknown-linux-musl
       run: |
         curl -L "$LINK/v$CROSS_VERSION/$CROSS_FILE.tar.gz" |
         tar xz -C $HOME/.cargo/bin
@@ -226,17 +246,19 @@ jobs:
       run: |
         curl -L $LINK/$CARGO_C_FILE | tar xz -C ~/.cargo/bin
 
-    - name: Build rav1e for aarch64-musl
-      if: matrix.build == 'binary' && matrix.target == 'aarch64-unknown-linux-musl'
+    - name: Build rav1e for non-native architectures
+      if: matrix.build == 'binary' && matrix.target != 'x86_64-unknown-linux-musl'
       run: cross build --target ${{ matrix.target }} --profile release-strip
 
-    - name: Build librav1e for aarch64-musl
-      if: matrix.build == 'sdk' && matrix.target == 'aarch64-unknown-linux-musl'
+    - name: Build librav1e for non-native architectures
+      if: matrix.build == 'sdk' && matrix.target != 'x86_64-unknown-linux-musl'
       env:
         # We get around cross's lack of support for third-party subcommands by
         # defining a custom Dockerfile whose entrypoint rewrites the
         # "cargo build" command to "cargo cbuild"
         CROSS_BUILD_DOCKERFILE: ./cross/Dockerfile.libs
+        CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_RUSTFLAGS:
+          "-C target-feature=-crt-static"
         CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS:
           "-C target-feature=-crt-static"
       run: |
@@ -244,13 +266,13 @@ jobs:
         cross build --target ${{ matrix.target }} --profile release-strip
 
     - name: Build rav1e
-      if: matrix.build == 'binary' && matrix.target != 'aarch64-unknown-linux-musl'
+      if: matrix.build == 'binary' && matrix.target == 'x86_64-unknown-linux-musl'
       env:
         RUSTFLAGS: "-C target-cpu=${{ matrix.target_cpu }}"
       run: cargo build --target ${{ matrix.target }} --profile release-strip
 
     - name: Build librav1e
-      if: matrix.build == 'sdk' && matrix.target != 'aarch64-unknown-linux-musl'
+      if: matrix.build == 'sdk' && matrix.target == 'x86_64-unknown-linux-musl'
       env:
         RUSTFLAGS:
           "-C target-feature=-crt-static -C target-cpu=${{ matrix.target_cpu }}"
@@ -345,6 +367,7 @@ jobs:
       with:
         profile: minimal
         toolchain: stable
+        target: ${{ matrix.target }}
         override: true
 
     - name: Install cargo-c
@@ -353,9 +376,9 @@ jobs:
         LINK: https://github.com/lu-zero/cargo-c/releases/latest/download
         CARGO_C_FILE: cargo-c-macos.zip
       run: |
-        which cargo
-        which cargo-fmt
-        curl -s -L $LINK/$CARGO_C_FILE | tar xvz -C  ~/.cargo/bin
+        curl -sLo cargo-c-macos.zip $LINK/$CARGO_C_FILE
+        unzip -o cargo-c-macos.zip -d ~/.cargo/bin
+        rm cargo-c-macos.zip
 
     - name: Build rav1e
       if: matrix.build == 'binary'
@@ -467,14 +490,14 @@ jobs:
           rav1e (linux-avx2)/rav1e-linux-avx2.tar.gz
           rav1e (linux-aarch64)/rav1e-linux-aarch64.tar.gz
           rav1e (macos)/rav1e-macos.zip
-          rav1e (macos)/rav1e-macos-aarch64.zip
+          rav1e (macos-aarch64)/rav1e-macos-aarch64.zip
           librav1e (linux-generic)/librav1e-linux-generic.tar.gz
           librav1e (linux-i686)/librav1e-linux-i686.tar.gz
           librav1e (linux-sse4)/librav1e-linux-sse4.tar.gz
           librav1e (linux-avx2)/librav1e-linux-avx2.tar.gz
           librav1e (linux-aarch64)/librav1e-linux-aarch64.tar.gz
           librav1e (macos)/librav1e-macos.tar.gz
-          librav1e (macos)/librav1e-macos-aarch64.tar.gz
+          librav1e (macos-aarch64)/librav1e-macos-aarch64.tar.gz
           rav1e (Windows-msvc-generic)/rav1e-windows-msvc-generic.zip
           rav1e (Windows-msvc-sse4)/rav1e-windows-msvc-sse4.zip
           rav1e (Windows-msvc-avx2)/rav1e-windows-msvc-avx2.zip
@@ -500,14 +523,14 @@ jobs:
           rav1e (linux-avx2)/rav1e-linux-avx2.tar.gz
           rav1e (linux-aarch64)/rav1e-linux-aarch64.tar.gz
           rav1e (macos)/rav1e-macos.zip
-          rav1e (macos)/rav1e-macos-aarch64.zip
+          rav1e (macos-aarch64)/rav1e-macos-aarch64.zip
           librav1e (linux-generic)/librav1e-linux-generic.tar.gz
           librav1e (linux-i686)/librav1e-linux-i686.tar.gz
           librav1e (linux-sse4)/librav1e-linux-sse4.tar.gz
           librav1e (linux-avx2)/librav1e-linux-avx2.tar.gz
           librav1e (linux-aarch64)/librav1e-linux-aarch64.tar.gz
           librav1e (macos)/librav1e-macos.tar.gz
-          librav1e (macos)/librav1e-macos-aarch64.tar.gz
+          librav1e (macos-aarch64)/librav1e-macos-aarch64.tar.gz
           rav1e (Windows-msvc-generic)/rav1e-windows-msvc-generic.zip
           rav1e (Windows-msvc-sse4)/rav1e-windows-msvc-sse4.zip
           rav1e (Windows-msvc-avx2)/rav1e-windows-msvc-avx2.zip
@@ -532,14 +555,14 @@ jobs:
           rav1e (linux-avx2)/rav1e-${{ steps.tagName.outputs.version }}-linux-avx2.tar.gz
           rav1e (linux-aarch64)/rav1e-${{ steps.tagName.outputs.version }}-linux-aarch64.tar.gz
           rav1e (macos)/rav1e-${{ steps.tagName.outputs.version }}-macos.zip
-          rav1e (macos)/rav1e-${{ steps.tagName.outputs.version }}-macos-aarch64.zip
+          rav1e (macos-aarch64)/rav1e-${{ steps.tagName.outputs.version }}-macos-aarch64.zip
           librav1e (linux-generic)/librav1e-${{ steps.tagName.outputs.version }}-linux-generic.tar.gz
           librav1e (linux-i686)/librav1e-${{ steps.tagName.outputs.version }}-linux-i686.tar.gz
           librav1e (linux-sse4)/librav1e-${{ steps.tagName.outputs.version }}-linux-sse4.tar.gz
           librav1e (linux-avx2)/librav1e-${{ steps.tagName.outputs.version }}-linux-avx2.tar.gz
           librav1e (linux-aarch64)/librav1e-${{ steps.tagName.outputs.version }}-linux-aarch64.tar.gz
           librav1e (macos)/librav1e-${{ steps.tagName.outputs.version }}-macos.tar.gz
-          librav1e (macos)/librav1e-${{ steps.tagName.outputs.version }}-macos-aarch64.tar.gz
+          librav1e (macos-aarch64)/librav1e-${{ steps.tagName.outputs.version }}-macos-aarch64.tar.gz
           rav1e (Windows-msvc-generic)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-generic.zip
           rav1e (Windows-msvc-sse4)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-sse4.zip
           rav1e (Windows-msvc-avx2)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-avx2.zip
