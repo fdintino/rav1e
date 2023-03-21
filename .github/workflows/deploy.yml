@@ -224,7 +224,7 @@ jobs:
         LINK: https://github.com/lu-zero/cargo-c/releases/latest/download
         CARGO_C_FILE: cargo-c-x86_64-unknown-linux-musl.tar.gz
       run: |
-        curl -L $LINK/$CARGO_C_FILE | tar xz -C $(dirname $(rustup which cargo))
+        curl -L $LINK/$CARGO_C_FILE | tar xz -C ~/.cargo/bin
 
     - name: Build rav1e for aarch64-musl
       if: matrix.build == 'binary' && matrix.target == 'aarch64-unknown-linux-musl'
@@ -239,7 +239,9 @@ jobs:
         CROSS_BUILD_DOCKERFILE: ./cross/Dockerfile.libs
         CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS:
           "-C target-feature=-crt-static"
-      run: cross build --target ${{ matrix.target }} --profile release-strip
+      run: |
+        cp ~/.cargo/bin/cargo-c* $(dirname $(rustup which cargo))
+        cross build --target ${{ matrix.target }} --profile release-strip
 
     - name: Build rav1e
       if: matrix.build == 'binary' && matrix.target != 'aarch64-unknown-linux-musl'
@@ -351,7 +353,9 @@ jobs:
         LINK: https://github.com/lu-zero/cargo-c/releases/latest/download
         CARGO_C_FILE: cargo-c-macos.zip
       run: |
-        curl -L $LINK/$CARGO_C_FILE | tar xz -C  ~/.cargo/bin
+        which cargo
+        which cargo-fmt
+        curl -s -L $LINK/$CARGO_C_FILE | tar xvz -C  ~/.cargo/bin
 
     - name: Build rav1e
       if: matrix.build == 'binary'
