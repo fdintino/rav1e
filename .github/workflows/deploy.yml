@@ -10,7 +10,6 @@ on:
 jobs:
   windows-rav1e-ch-binary:
 
-    if: github.repository_owner == 'xiph'
     runs-on: windows-latest
 
     steps:
@@ -76,7 +75,6 @@ jobs:
            profile: release-strip
            target_cpu: x86-64-v3
 
-    if: github.repository_owner == 'xiph'
     runs-on: windows-latest
 
     steps:
@@ -209,7 +207,6 @@ jobs:
          - target: i686-unknown-linux-musl
            target_cpu: x86-64-v3
 
-    if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
 
     name: linux-binaries (${{ matrix.build }}, ${{ matrix.name }})
@@ -325,7 +322,6 @@ jobs:
         path: ${{ env.ARTIFACT_FILE }}
 
   macos-binaries:
-    if: github.repository_owner == 'xiph'
     runs-on: macos-latest
 
     strategy:
@@ -436,7 +432,6 @@ jobs:
 
   deploy:
     needs: [windows-rav1e-ch-binary, windows-binaries, linux-binaries, macos-binaries]
-    if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
 
     steps:
