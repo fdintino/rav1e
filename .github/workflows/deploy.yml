@@ -106,6 +106,7 @@ jobs:
       run: |
         cargo fetch
         cargo cinstall --profile ${{ matrix.profile }} --destdir="C:\" --offline
+        cargo cinstall --profile ${{ matrix.profile }} --destdir="C:\" --offline --library-type=staticlib
 
     - name: Rename cargo-c folder
       run: Rename-Item "C:\usr\local" "C:\usr\rav1e-windows-${{ matrix.conf }}-sdk"
