@@ -10,7 +10,6 @@ on:
 jobs:
   windows-rav1e-ch-binary:
 
-    if: github.repository_owner == 'xiph'
     runs-on: windows-latest
 
     steps:
@@ -76,7 +75,6 @@ jobs:
            profile: release-strip
            target_cpu: x86-64-v3
 
-    if: github.repository_owner == 'xiph'
     runs-on: windows-latest
 
     steps:
@@ -208,7 +206,6 @@ jobs:
          - target: i686-unknown-linux-musl
            target_cpu: x86-64-v3
 
-    if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
 
     name: linux-binaries (${{ matrix.build }}, ${{ matrix.name }})
@@ -251,10 +248,6 @@ jobs:
         # defining a custom Dockerfile whose entrypoint rewrites the
         # "cargo build" command to "cargo cinstall"
         CROSS_BUILD_DOCKERFILE: ./cross/Dockerfile.libs
-        CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_RUSTFLAGS:
-          "-C target-feature=+crt-static"
-        CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS:
-          "-C target-feature=+crt-static"
       run: |
         cp ~/.cargo/bin/cargo-c* $(dirname $(rustup which cargo))
         cross build --target ${{ matrix.target }} --profile release-strip
@@ -269,7 +262,7 @@ jobs:
       if: matrix.build == 'sdk' && matrix.target == 'x86_64-unknown-linux-musl'
       env:
         RUSTFLAGS:
-          "-C target-feature=+crt-static -C target-cpu=${{ matrix.target_cpu }}"
+          "-C target-cpu=${{ matrix.target_cpu }}"
       run: |
         cargo cinstall --target ${{ matrix.target }} \
           --prefix dist \
@@ -324,7 +317,6 @@ jobs:
         path: ${{ env.ARTIFACT_FILE }}
 
   macos-binaries:
-    if: github.repository_owner == 'xiph'
     runs-on: macos-latest
 
     strategy:
@@ -435,7 +427,6 @@ jobs:
 
   deploy:
     needs: [windows-rav1e-ch-binary, windows-binaries, linux-binaries, macos-binaries]
-    if: github.repository_owner == 'xiph'
     runs-on: ubuntu-latest
 
     steps:
