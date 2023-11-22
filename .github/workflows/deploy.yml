@@ -220,7 +220,6 @@ jobs:
         target: ${{ matrix.target }}
 
     - name: Install cross
-      if: matrix.target != 'x86_64-unknown-linux-musl'
       env:
         LINK: https://github.com/cross-rs/cross/releases/download
         CROSS_VERSION: 0.2.5
@@ -241,8 +240,8 @@ jobs:
       if: matrix.build == 'binary' && matrix.target != 'x86_64-unknown-linux-musl'
       run: cross build --target ${{ matrix.target }} --profile release-strip
 
-    - name: Build librav1e for non-native architectures
-      if: matrix.build == 'sdk' && matrix.target != 'x86_64-unknown-linux-musl'
+    - name: Build librav1e
+      if: matrix.build == 'sdk'
       env:
         # We get around cross's lack of support for third-party subcommands by
         # defining a custom Dockerfile whose entrypoint rewrites the
@@ -257,18 +256,6 @@ jobs:
       env:
         RUSTFLAGS: "-C target-cpu=${{ matrix.target_cpu }}"
       run: cargo build --target ${{ matrix.target }} --profile release-strip
-
-    - name: Build librav1e
-      if: matrix.build == 'sdk' && matrix.target == 'x86_64-unknown-linux-musl'
-      env:
-        RUSTFLAGS:
-          "-C target-cpu=${{ matrix.target_cpu }}"
-      run: |
-        cargo cinstall --target ${{ matrix.target }} \
-          --prefix dist \
-          --library-type staticlib \
-          --library-type cdylib \
-          --profile release-strip
 
     - name: Get pre-release artifact filename
       if: |
