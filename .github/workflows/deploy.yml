@@ -40,44 +40,58 @@ jobs:
         conf:
          - msvc
          - gnu
-        target_cpu:
-         - x86-64
-         - x86-64-v2
-         - x86-64-v3
+        rust_flags:
+        - -C target-cpu=x86-64
+        - -C target-cpu=x86-64-v2
+        - -C target-cpu=x86-64-v3
         include:
          - conf: msvc
            name: msvc-generic
            toolchain: stable
            profile: release
-           target_cpu: x86-64
+           rust_flags: -C target-cpu=x86-64
+           target: x86_64-pc-windows-msvc
          - conf: msvc
            name: msvc-sse4
            toolchain: stable
            profile: release
-           target_cpu: x86-64-v2
+           rust_flags: -C target-cpu=x86-64-v2
+           target: x86_64-pc-windows-msvc
          - conf: msvc
            name: msvc-avx2
            toolchain: stable
            profile: release
-           target_cpu: x86-64-v3
+           rust_flags: -C target-cpu=x86-64-v3
+           target: x86_64-pc-windows-msvc
+         - conf: msvc
+           name: msvc-aarch64
+           toolchain: stable
+           profile: release
+           target: aarch64-pc-windows-msvc
+           rust_flags: " "
          - conf: gnu
            name: gnu-generic
            toolchain: stable-x86_64-pc-windows-gnu
            profile: release-no-lto
-           target_cpu: x86-64
+           rust_flags: -C target-cpu=x86-64
+           target: x86_64-pc-windows-gnu
          - conf: gnu
            name: gnu-sse4
            toolchain: stable-x86_64-pc-windows-gnu
            profile: release-no-lto
-           target_cpu: x86-64-v2
+           rust_flags: -C target-cpu=x86-64-v2
+           target: x86_64-pc-windows-gnu
          - conf: gnu
            name: gnu-avx2
            toolchain: stable-x86_64-pc-windows-gnu
            profile: release-no-lto
-           target_cpu: x86-64-v3
+           rust_flags: -C target-cpu=x86-64-v3
+           target: x86_64-pc-windows-gnu
 
     # if: github.repository_owner == 'xiph'
     runs-on: windows-latest
+
+    name: windows-binaries (${{ matrix.name }})
 
     steps:
     - uses: actions/checkout@v4
@@ -94,6 +108,7 @@ jobs:
       uses: dtolnay/rust-toolchain@master
       with:
         toolchain: ${{ matrix.toolchain }}
+        target: ${{ matrix.target }}
 
     - name: Install mingw-w64-x86_64-binutils and mingw-w64-x86_64-gcc
       run: |
@@ -102,22 +117,22 @@ jobs:
 
     - name: Build rav1e
       env:
-        RUSTFLAGS: "-C target-cpu=${{ matrix.target_cpu }}"
+        RUSTFLAGS: "${{ matrix.rust_flags }}"
         CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: "C:\\msys64\\mingw64\\bin\\x86_64-w64-mingw32-gcc.exe"
         CARGO_TARGET_X86_64_PC_WINDOWS_GNU_AR: "C:\\msys64\\mingw64\\bin\\ar.exe"
       run: cargo build --profile ${{ matrix.profile }}
 
     - name: Run cargo-c
       env:
-        RUSTFLAGS: "-C target-cpu=${{ matrix.target_cpu }}"
+        RUSTFLAGS: "${{ matrix.rust_flags }}"
         CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: "C:\\msys64\\mingw64\\bin\\x86_64-w64-mingw32-gcc.exe"
         CARGO_TARGET_X86_64_PC_WINDOWS_GNU_AR: "C:\\msys64\\mingw64\\bin\\ar.exe"
       run: |
         cargo fetch
-        cargo cinstall \
-          --profile ${{ matrix.profile }} \
-          --destdir="C:\" \
-          --libdir lib --prefix /usr/rav1e-windows-${{ matrix.conf }}-sdk \
+        cargo cinstall `
+          --profile ${{ matrix.profile }} `
+          --destdir="C:\" `
+          --libdir lib --prefix /usr/rav1e-windows-${{ matrix.conf }}-sdk `
           --offline
 
     - name: Copy LICENSE
@@ -499,6 +514,7 @@ jobs:
           librav1e (Windows-msvc-generic)/rav1e-windows-msvc-generic.zip
           librav1e (Windows-msvc-sse4)/rav1e-windows-msvc-sse4.zip
           librav1e (Windows-msvc-avx2)/rav1e-windows-msvc-avx2.zip
+          librav1e (Windows-msvc-aarch64)/rav1e-windows-msvc-aarch64.zip
           librav1e (Windows-gnu-generic)/rav1e-windows-gnu-generic.zip
           librav1e (Windows-gnu-sse4)/rav1e-windows-gnu-sse4.zip
           librav1e (Windows-gnu-avx2)/rav1e-windows-gnu-avx2.zip
@@ -532,6 +548,7 @@ jobs:
           librav1e (Windows-msvc-generic)/rav1e-windows-msvc-generic.zip
           librav1e (Windows-msvc-sse4)/rav1e-windows-msvc-sse4.zip
           librav1e (Windows-msvc-avx2)/rav1e-windows-msvc-avx2.zip
+          librav1e (Windows-msvc-aarch64)/rav1e-windows-msvc-aarch64.zip
           librav1e (Windows-gnu-generic)/rav1e-windows-gnu-generic.zip
           librav1e (Windows-gnu-sse4)/rav1e-windows-gnu-sse4.zip
           librav1e (Windows-gnu-avx2)/rav1e-windows-gnu-avx2.zip
@@ -564,6 +581,7 @@ jobs:
           rav1e ${{ steps.tagName.outputs.version }} (Windows-msvc-generic)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-generic.zip
           rav1e ${{ steps.tagName.outputs.version }} (Windows-msvc-sse4)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-sse4.zip
           rav1e ${{ steps.tagName.outputs.version }} (Windows-msvc-avx2)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-avx2.zip
+          rav1e ${{ steps.tagName.outputs.version }} (Windows-msvc-aarch64)/rav1e-${{ steps.tagName.outputs.version }}-windows-msvc-aarch64.zip
           rav1e ${{ steps.tagName.outputs.version }} (Windows-gnu-generic)/rav1e-${{ steps.tagName.outputs.version }}-windows-gnu-generic.zip
           rav1e ${{ steps.tagName.outputs.version }} (Windows-gnu-sse4)/rav1e-${{ steps.tagName.outputs.version }}-windows-gnu-sse4.zip
           rav1e ${{ steps.tagName.outputs.version }} (Windows-gnu-avx2)/rav1e-${{ steps.tagName.outputs.version }}-windows-gnu-avx2.zip
